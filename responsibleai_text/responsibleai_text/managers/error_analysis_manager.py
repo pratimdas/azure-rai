@@ -71,10 +71,10 @@ class WrappedIndexPredictorModel:
                          ModelTask.MULTILABEL_TEXT_CLASSIFICATION]
         if self.task_type in classif_tasks:
             dataset = self.dataset.iloc[:, 0].tolist()
-            self.predictions = self.model.predict(dataset)
-            self.predict_proba = self.model.predict_proba(dataset)
+            self.predictions = self._raise_user_error_on_failure(self.model.predict, dataset)
+            self.predict_proba = self._raise_user_error_on_failure(self.model.predict_proba, dataset)
         elif self.task_type == ModelTask.QUESTION_ANSWERING:
-            self.predictions = self.model.predict(
+            self.predictions = self._raise_user_error_on_failure(self.model.predict,
                 self.dataset.loc[:, ['context', 'questions']])
             self.predictions = np.array(self.predictions)
         else:
@@ -120,6 +120,12 @@ class WrappedIndexPredictorModel:
         index = X.index
         pred_proba = self.predict_proba[index]
         return pred_proba
+
+    def _raise_user_error_on_failure(func, *args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as ex:
+            raise UserErrorException(f"Unable to use user model to retrieve predictions from given dataset. Original exception: {ex}")
 
 
 class ErrorAnalysisManager(BaseErrorAnalysisManager):
